@@ -20,7 +20,7 @@ To run the program do
 python3 main.py ARG
 ```
 Where the `ARG` can be either of the following:
- * `expectimax` - run the expectimax
- * `random` - play using a completely random ai
+ * `expectimax` - run the expectimax ai
+ * `random` - play using a completely random "ai"
  * `naive_order` - play with a simple ai using a prioritized preference for each move
  * `play` - To play a game yourself
