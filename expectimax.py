@@ -1,5 +1,5 @@
 from game import Game
-from numba import njit 
+from numba import njit
 import numba
 from numba import int64
 import numpy as np
@@ -18,9 +18,9 @@ EMPTY_FIELD = 0
 @njit(fastmath=True, cache=True)
 def h(game_state):
     weights = [
-      [15, 14, 13, 12], 
-      [8, 9, 10, 11], 
-      [7, 6, 5, 4], 
+      [15, 14, 13, 12],
+      [8, 9, 10, 11],
+      [7, 6, 5, 4],
       [0, 1, 2, 3]
     ]
 
@@ -35,7 +35,7 @@ def h(game_state):
     penalty = 0
     for i in range(4):
         for j in range(4):
-            if not game_state[i][j] == EMPTY_FIELD: 
+            if not game_state[i][j] == EMPTY_FIELD:
                 if i == 0:
                     if game_state[i+1][j] != EMPTY_FIELD:
                         penalty += abs(game_state[i][j] - game_state[i+1][j])
@@ -43,7 +43,7 @@ def h(game_state):
                         penalty += abs(game_state[i][j] - game_state[i][j+1])
                     if j != 0 and game_state[i][j-1]:
                         penalty += abs(game_state[i][j] - game_state[i][j-1])
-                elif i == 3: 
+                elif i == 3:
                     if game_state[i-1][j] != EMPTY_FIELD:
                         penalty += abs(game_state[i][j] - game_state[i-1][j])
                     if j != 3 and game_state[i][j+1] != EMPTY_FIELD:
@@ -55,7 +55,7 @@ def h(game_state):
                         penalty += abs(game_state[i][j] - game_state[i+1][j])
                     if game_state[i-1][j] != EMPTY_FIELD:
                         penalty += abs(game_state[i][j] - game_state[i-1][j])
-                    if j != 3 and game_state[i][j+1] != EMPTY_FIELD: 
+                    if j != 3 and game_state[i][j+1] != EMPTY_FIELD:
                         penalty += abs(game_state[i][j] - game_state[i][j+1])
                     if j != 0 and game_state[i][j-1] != EMPTY_FIELD:
                         penalty += abs(game_state[i][j] - game_state[i][j-1])
@@ -65,13 +65,13 @@ def h(game_state):
 
 # Counting down the depth instead of up, makes caching better 
 @njit(cache=True)
-def h_min_max(game_state, depth=5):
+def h_min_max(game_state, depth=3):
     possible_moves_to_make = possible_moves(game_state)
     if len(possible_moves_to_make) == 0:
-        return IMPOSSIBLE_MOVE, h(game_state) 
+        return IMPOSSIBLE_MOVE, h(game_state)
 
     if depth <= 0:
-        return IMPOSSIBLE_MOVE, h(game_state) 
+        return IMPOSSIBLE_MOVE, h(game_state)
 
     down_score = 0
     up_score = 0
@@ -89,10 +89,10 @@ def h_min_max(game_state, depth=5):
             moved_game_state = moved_right(game_state)
 
         empty_fields = find_empty_fields(moved_game_state)
-        depth_increase = 1 if len(empty_fields) < 6 else 2
+        depth_increase = 1 if len(empty_fields) < 7 else 2
 
-        
-        new_game = moved_game_state.copy() 
+
+        new_game = moved_game_state.copy()
         if len(empty_fields) == 0:
             expected_score = h_min_max(new_game, depth=depth - depth_increase)[1]
             if move == DOWN:
@@ -106,16 +106,17 @@ def h_min_max(game_state, depth=5):
 
         else:
             for (col, row) in empty_fields:
-                new_game[col, row] = 2
-                expected_score =  h_min_max(new_game, depth=depth - depth_increase)[1]
-                if move == DOWN:
-                    down_score += expected_score / len(empty_fields)
-                elif move == UP:
-                    up_score += expected_score / len(empty_fields)
-                elif move == LEFT:
-                    left_score += expected_score / len(empty_fields)
-                else:
-                    right_score += expected_score / len(empty_fields) 
+                for (val, prob) in [(2,0.9), (4, 0.1)]:
+                    new_game[col, row] = val
+                    expected_score = h_min_max(new_game, depth=depth - depth_increase)[1]
+                    if move == DOWN:
+                        down_score += prob * expected_score / len(empty_fields)
+                    elif move == UP:
+                        up_score += prob * expected_score / len(empty_fields)
+                    elif move == LEFT:
+                        left_score += prob * expected_score / len(empty_fields)
+                    else:
+                        right_score += prob * expected_score / len(empty_fields)
 
 
     max_score = max(up_score, left_score, down_score, right_score)
@@ -130,7 +131,7 @@ def h_min_max(game_state, depth=5):
 
 def run():
     """
-    Will simulate a game using the heristic h in expectimax 
+    Will simulate a game using the heristic h in expectimax
     The score is returned when the game is lost.
     """
     game = Game()
@@ -177,12 +178,12 @@ def find_empty_fields(game_state):
 
 @njit(cache=True)
 def moved_up(game_state):
-    new_board = game_state.copy() 
+    new_board = game_state.copy()
     for i in range(4):
-        col = new_board[:, i] 
+        col = new_board[:, i]
         col = jitted_fold_list(col)
         col = np.append(col, np.array([EMPTY_FIELD] * (4 - len(col))), 0 )
-        new_board[:, i] = col 
+        new_board[:, i] = col
     return new_board
 
 @njit(cache=True)
@@ -192,7 +193,7 @@ def moved_left(game_state):
         col = new_board[i, :]
         col = jitted_fold_list(col)
         col = np.append(col, np.array([EMPTY_FIELD] * (4 - len(col))), 0 )
-        new_board[i, :] = col 
+        new_board[i, :] = col
     return new_board
 
 
@@ -222,11 +223,11 @@ def possible_moves(game_state):
 @njit(cache=True)
 def jitted_fold_list(l):
     """
-    Determines what happens when a column or a row is _compressed_. 
+    Determines what happens when a column or a row is _compressed_.
     This might be able to be done by using some sort fo recursion, but since the amount of cases
     are quite short, then we simply consider all options by themselves.
 
-    The function returns a list of the not-EMPTY_FIELD values from the list. 
+    The function returns a list of the not-EMPTY_FIELD values from the list.
     Examples:
     ```python
     fold_4_list([1,1,EMPTY_FIELD,EMPTY_FIELD]) == [2]
@@ -238,7 +239,7 @@ def jitted_fold_list(l):
     ```
     """
     # All EMPTY_FIELD values are redundant for the problem and are therefore ignored
-    values = l[l != EMPTY_FIELD] 
+    values = l[l != EMPTY_FIELD]
     if len(values) == 0:
         return values
     elif len(values) == 1:
@@ -276,11 +277,11 @@ def jitted_fold_list(l):
 #@numba.cfunc("int64[:](int64[:])")
 def fold_4_list(l):
     """
-    Determines what happens when a column or a row is _compressed_. 
+    Determines what happens when a column or a row is _compressed_.
     This might be able to be done by using some sort fo recursion, but since the amount of cases
     are quite short, then we simply consider all options by themselves.
 
-    The function returns a list of the not-EMPTY_FIELD values from the list. 
+    The function returns a list of the not-EMPTY_FIELD values from the list.
     Examples:
     ```python
     fold_4_list([1,1,EMPTY_FIELD,EMPTY_FIELD]) == [2]
@@ -292,7 +293,7 @@ def fold_4_list(l):
     ```
     """
     # All EMPTY_FIELD values are redundant for the problem and are therefore ignored
-    values = l[l != EMPTY_FIELD] 
+    values = l[l != EMPTY_FIELD]
     if len(values) == 0:
         return values
     elif len(values) == 1:
@@ -327,30 +328,3 @@ def fold_4_list(l):
     else:
         return values
 
-
-if __name__ == "__main__":
-    game_state = np.array(
-        [[2]*3 + 1*[EMPTY_FIELD], 
-        [2]+ [EMPTY_FIELD]*3, 
-        [EMPTY_FIELD]*4, 
-        [EMPTY_FIELD]*4] )
-    game_state = np.array(
-        [ [64, 2, 32, EMPTY_FIELD],
-          [2, 16, 4, 2],
-          [256, 64, 32, 8],
-          [2, 16, 8, 2]
-        ]
-    )
-    print(game_state)
-    print("Possible Moves: ", possible_moves(game_state))
-    print(h_min_max(game_state))
-    print(jitted_fold_list(np.array(game_state[1,:])))
-    print(jitted_fold_list(np.array([EMPTY_FIELD, 2, 2, EMPTY_FIELD])))
-
-    game_state = np.array(
-        [[2]*3 + 1*[EMPTY_FIELD], 
-        [2]+ [EMPTY_FIELD]*3, 
-        [EMPTY_FIELD]*4, 
-        [EMPTY_FIELD]*4] )
-    print(game_state)
-    print(jitted_moved_left(game_state))

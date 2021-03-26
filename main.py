@@ -13,6 +13,12 @@ if __name__ == "__main__":
     if argument.lower() == "expectimax":
         score = expectimax.run()
         print(f"The final sum on the board was: {score}")
+    if argument.lower() == "benchmark":
+        scores = []
+        for i in range(5):
+            score = expectimax.run()
+            scores.append(score)
+        print(scores)
     elif argument.lower() == "random":
         score = random_ai.run()
         print(f"The final sum on the board was: {score}")
